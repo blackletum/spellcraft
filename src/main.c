@@ -18,6 +18,7 @@
 #include "time/game_mode.h"
 #include "render/tmesh.h"
 #include "util/init.h"
+#include "util/rsp_timer.h"
 #include "util/screen_debug.h"
 #include "effects/area_title.h"
 #include "effects/fade_effect.h"
@@ -138,15 +139,6 @@ void render_menu(struct frame_memory_pool* pool) {
     screen_debug_render();
 }
 
-#if ENABLE_PROFILE_rsp
-static uint64_t render_start_time;
-
-void render_finish_callback(void* data) {
-    debugf("render: %f\n", (float)(get_ticks_us() - render_start_time) * 0.001f);
-}
-
-#endif
-
 static float blur_strength_frames[] = {
     0.1f,
     0.15f,
@@ -163,9 +155,14 @@ static float blur_strength_frames[] = {
 
 uint8_t blur_frame_counter = BLUR_STRENGTH_COUNT;
 
+
+#if ENABLE_PROFILE_rsp
+    static timer_output_t rsp_timer_output;
+#endif
+
 void render(surface_t* col, surface_t* zbuffer, struct frame_memory_pool* pool) {
 #if ENABLE_PROFILE_rsp
-    render_start_time = get_ticks_us();
+    rsp_timer_start(0);
 #endif
 
     update_render_time();
@@ -187,7 +184,8 @@ void render(surface_t* col, surface_t* zbuffer, struct frame_memory_pool* pool) 
     }
     render_menu(pool);
 #if ENABLE_PROFILE_rsp
-    rdpq_call_deferred(render_finish_callback, NULL);
+    rsp_timer_end(0, &rsp_timer_output);
+    debugf("render = %f\n", rsp_timer_output_ms(&rsp_timer_output));
 #endif
 }
 
@@ -266,6 +264,10 @@ int main(void)
 #endif
 
     setup();
+
+#if ENABLE_PROFILE_rsp
+    rsp_timer_init();
+#endif
     
     register_VI_handler(on_vi_interrupt);
 

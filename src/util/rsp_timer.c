@@ -10,6 +10,8 @@ static float cached_timers[MAX_TIMERS];
 
 DEFINE_RSP_UCODE(rsp_timing);
 
+#define TICKS_TO_SECONDS     (1.0f / 62500.0f)
+
 void rsp_timer_init() {
     TIMER_OVERLAY_ID = rspq_overlay_register(&rsp_timing);
 }
@@ -24,9 +26,9 @@ void rsp_timer_start(unsigned index) {
     is_dirty = true;
 }
 
-void rsp_timer_end(unsigned index) {
+void rsp_timer_end(unsigned index, timer_output_t* output) {
     assert(index < MAX_TIMERS);
-    rspq_write(TIMER_OVERLAY_ID, 1, index * 4);
+    rspq_write(TIMER_OVERLAY_ID, 1, index * 4, PhysicalAddr(output));
     is_dirty = true;
 }
 
@@ -37,11 +39,15 @@ float rsp_timer_get(unsigned index) {
         int* data = rspq_overlay_get_state(&rsp_timing);
 
         for (int i = 0; i < MAX_TIMERS; i += 1) {
-            cached_timers[i] = data[i] * (1.0f / 62500.0f);
+            cached_timers[i] = data[i] * TICKS_TO_SECONDS;
         }
 
         is_dirty = false;
     }
 
     return cached_timers[index];
+}
+
+float rsp_timer_output_ms(timer_output_t* output) {
+    return output->result * TICKS_TO_SECONDS;
 }

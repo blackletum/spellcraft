@@ -47,6 +47,7 @@ void breakable_update(void* data) {
     } else {
         if (!health_is_alive(&breakable->health)) {
             breakable->is_breaking = true;
+            breakable->interactable.interact_type = INTERACT_TYPE_NONE;
 
             if (breakable->break_effect_mesh) {
                 renderable_set_mesh_direct(&breakable->renderable, breakable->break_effect_mesh);
