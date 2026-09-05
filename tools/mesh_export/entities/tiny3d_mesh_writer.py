@@ -471,7 +471,7 @@ def _sort_chunks(chunks: list[mesh_optimizer.mesh_chunk], sort_direction: mathut
     sort_result = sorted(zipped, key=lambda x: x[1])
     return list(map(lambda x: x[0], sort_result))
 
-def write_mesh(mesh_list: list[mesh.mesh_data], arm: armature.ArmatureData | None, attachments: list[armature.BoneLinkage], settings: export_settings.ExportSettings, file):
+def write_mesh(mesh_list: list[mesh.mesh_data], arm: armature.ArmatureData | None, attachments: list[armature.BoneLinkage], settings: export_settings.ExportSettings, file, preserve_chunk_order = False):
     file.write('T3MS'.encode())
 
     chunks: list[mesh_optimizer.mesh_chunk] = []
@@ -495,10 +495,11 @@ def write_mesh(mesh_list: list[mesh.mesh_data], arm: armature.ArmatureData | Non
 
         chunks += mesh_optimizer.chunkify_mesh(mesh, mat or settings.default_material, settings.default_material)
 
-    if settings.sort_direction:
-        chunks = _sort_chunks(chunks, settings.sort_direction)
-    else:
-        chunks = mesh_optimizer.determine_chunk_order(chunks, settings.default_material)
+    if not preserve_chunk_order:
+        if settings.sort_direction:
+            chunks = _sort_chunks(chunks, settings.sort_direction)
+        else:
+            chunks = mesh_optimizer.determine_chunk_order(chunks, settings.default_material)
 
     commands = []
     vertices = []

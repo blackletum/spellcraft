@@ -333,6 +333,30 @@ class mesh_list():
         bm.free()
         self.meshes.append(mesh_list_entry(obj, mesh, self.base_transform @ obj.matrix_world))
 
+    def generate_mesh_data_by_order(self, armature: armature.ArmatureData | None = None) -> list[mesh_data]:
+        result: list[mesh_data] = []
+
+        for entry in self.meshes:
+            mesh = entry.mesh
+            transform = entry.transform
+
+            for material_index in range(max(len(mesh.materials), 1)):
+                if material_index < len(mesh.materials):
+                    mat = mesh.materials[material_index]
+
+                    if mat == None:
+                        continue
+                else:
+                    continue
+
+                data_for_mat = mesh_data(mat)
+
+                data_for_mat.append_mesh(entry.obj, mesh, material_index, transform, armature)
+
+                result.append(data_for_mat)
+
+        return result
+
     def determine_mesh_data(self, armature: armature.ArmatureData | None = None) -> list[mesh_data]:
         mesh_by_material: dict[str, mesh_data] = dict()
 

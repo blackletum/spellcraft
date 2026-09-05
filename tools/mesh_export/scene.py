@@ -193,6 +193,9 @@ class room_static_meshes:
 
 def write_static(scene: Scene, base_transform: mathutils.Matrix, room_collection: room.room_collection, file):
     settings = export_settings.ExportSettings()
+    settings.default_material = material.Material("Default")
+    settings.default_material.priority = 0
+    settings.default_material_name = 'rom:/materials/background.mat'
 
     for entry in scene.static:
         room_collection.get_obj_room_index(entry.obj)
@@ -205,37 +208,20 @@ def write_static(scene: Scene, base_transform: mathutils.Matrix, room_collection
     for entry in scene.static:
         mesh_list_for_rooms[room_collection.get_obj_room_index(entry.obj)].append(entry.obj)
 
-    meshes_for_rooms: list[list[entities_mesh.mesh_data]] = list(map(lambda x: x.determine_mesh_data(), mesh_list_for_rooms))
-    room_static_list: list[room_static_meshes] = []
+    meshes_for_rooms: list[list[entities_mesh.mesh_data]] = list(map(lambda x: x.generate_mesh_data_by_order(), mesh_list_for_rooms))
 
-    for mesh_in_room in meshes_for_rooms:
-        room_static = room_static_meshes()
+    file.write(len(meshes_for_rooms).to_bytes(2, 'big'))
 
-        for mesh in mesh_in_room:
-            room_static.add_mesh(mesh_optimizer.remove_duplicates(mesh))
-
-        room_static_list.append(room_static)
-
-    meshes: list[meshes_with_material] = []
-
-    for room_meshes in room_static_list:
-        meshes += room_meshes.generate_meshes()
-
-    file.write(len(meshes).to_bytes(2, 'big'))
-
-    for mesh in meshes:
+    for mesh in meshes_for_rooms:
         # this signals the mesh should be embedded
         file.write(b'\0')
 
-        settings.default_material_name = mesh.material_name
-        settings.default_material = mesh.material
+        tiny3d_mesh_writer.write_mesh(mesh, None, [], settings, file)
 
-        tiny3d_mesh_writer.write_mesh(mesh.meshes, None, [], settings, file)
-
-        if len(mesh.meshes) == 0:
+        if len(mesh) == 0:
             file.write(struct.pack('>fff', 0, 0, 0))
         else:
-            min, max = mesh.meshes[0].bounding_box()
+            min, max = mesh[0].bounding_box()
             center = (min + max) * 0.5
             file.write(struct.pack('>fff', center.x, center.y, center.z))
 
@@ -244,8 +230,8 @@ def write_static(scene: Scene, base_transform: mathutils.Matrix, room_collection
     file.write(room_count.to_bytes(2, 'big'))
     index_start = 0
 
-    for room_meshes in room_static_list:
-        room_mesh_count = room_meshes.mesh_count()
+    for room_meshes in meshes_for_rooms:
+        room_mesh_count = 1
         file.write(struct.pack('>HH', index_start, index_start + room_mesh_count))
         index_start += room_mesh_count
 
