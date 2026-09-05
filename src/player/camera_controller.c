@@ -32,19 +32,6 @@ static struct move_towards_parameters camera_move_parameters = {
 
 #define MIN_TWO_TARGET_DISTANCE 
 
-void camera_cached_calcuations_check(struct camera_cached_calcuations* cache, struct Camera* camera) {
-    if (camera->fov == cache->fov) {
-        return;
-    }
-
-    float height = tanf(camera->fov * 0.5f);
-    float width = ASPECT_RATIO * height;
-
-    cache->fov_horz = atanf(width) * 2.0f;
-    cache->cos_1_3_fov_horz = cosf(cache->fov_horz * 0.33333f);
-    cache->sin_1_3_fov_horz = sinf(cache->fov_horz * 0.33333f);
-}
-
 void camera_look_at_from_rotation(struct camera_controller* controller) {
     quatMultVector(&controller->camera.transform.rotation, &gForward, &controller->looking_at);
     vector3AddScaled(&controller->stable_position, &controller->looking_at, -CAMERA_FOLLOW_DISTANCE, &controller->looking_at);
@@ -493,7 +480,6 @@ void camera_controller_init(struct camera_controller* controller, struct player*
     controller->camera.transform.position = controller->target;
     controller->stable_position = controller->target;
     controller->camera.transform.scale = gOneVec;
-    controller->_cache_calcluations.fov = 0.0f;
     quatAxisAngle(&gRight, 0.0f, &controller->camera.transform.rotation);
 
     camera_controller_update_position(controller);

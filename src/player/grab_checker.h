@@ -21,6 +21,8 @@ struct grab_checker {
     vector2_t target_rot;
     uint8_t grab_mode;
     uint8_t cast_mode;
+    uint8_t climb_timer;
+    entity_id wall_collider_id;
 };
 
 typedef struct grab_checker grab_checker_t;

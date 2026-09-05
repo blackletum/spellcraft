@@ -18,7 +18,7 @@ static tmesh_t* grab_checker_mesh;
 #define HORIZONTAL_TOLERANCE    0.1f
 #define WALL_CHECK_TOLERANCE    0.701f
 #define GROUND_LEVEL_TOLERANCE  0.5f
-#define GRAB_TIMER_THRESHOLD    0
+#define GRAB_TIMER_THRESHOLD    2
 
 #define HANG_OFFSET             0.3f
 #define HANG_OVERHANG           0.1f
@@ -31,7 +31,7 @@ static tmesh_t* grab_checker_mesh;
 void grab_checker_render(void* data, struct render_batch* batch) {
     grab_checker_t* checker = (grab_checker_t*)data;
 
-    if (!checker->grab_mode) {
+    if (!checker->grab_mode && checker->climb_timer == 0) {
         return;
     }
 
@@ -65,6 +65,8 @@ void grab_checker_init(grab_checker_t* checker, struct dynamic_object_type* coll
     checker->cast_mode = GRAB_MODE_NONE;
     checker->target_pos = gZeroVec;
     checker->target_rot = gZeroVec2;
+    checker->climb_timer = 0;
+    checker->wall_collider_id = 0;
 
 #if DEBUG_GRABBER
     if (!grab_checker_mesh) {
@@ -84,7 +86,8 @@ grab_mode_t grab_checker_check_for_grab(grab_checker_t* checker) {
                 checker->target_pos.z - checker->position.z,
             };
             
-            if (!ground || ground->normal.y <= GROUND_LEVEL_TOLERANCE || vector2MagSqr(&offset) >= 0.1f) {
+            if (!ground || ground->other_object != checker->wall_collider_id || ground->normal.y <= GROUND_LEVEL_TOLERANCE || vector2MagSqr(&offset) >= 0.1f) {
+                checker->climb_timer = 0;
                 return GRAB_MODE_NONE;
             }
 
@@ -92,6 +95,7 @@ grab_mode_t grab_checker_check_for_grab(grab_checker_t* checker) {
 
             while (curr) {
                 if (fabsf(curr->normal.y) < 0.5f && offset.x * curr->normal.x + offset.y * curr->normal.z < 0.0f) {
+                    checker->climb_timer = 0;
                     return GRAB_MODE_NONE;
                 }
 
@@ -104,7 +108,9 @@ grab_mode_t grab_checker_check_for_grab(grab_checker_t* checker) {
                 .z = checker->target_pos.z,
             };
 
-            return GRAB_MODE_CLIMB;
+            checker->climb_timer += 1;
+
+            return checker->climb_timer > GRAB_TIMER_THRESHOLD;
         }
         case GRAB_MODE_HANG:
             if (checker->collider.active_contacts) {
@@ -121,13 +127,21 @@ grab_mode_t grab_checker_check_for_grab(grab_checker_t* checker) {
 void grab_checker_cast_climb(grab_checker_t* checker, dynamic_object_t* player_collider, contact_t* wall_contact, float max_grab_height) {
     checker->cast_mode = GRAB_MODE_CLIMB;
 
-    checker->position = (vector3_t){
-        .x = player_collider->position->x - wall_contact->normal.x * CLIMB_OFFSET,
-        .y = player_collider->position->y + max_grab_height,
-        .z = player_collider->position->z - wall_contact->normal.z * CLIMB_OFFSET,
-    };
+    if (checker->climb_timer) {
+        checker->collider.position->x = player_collider->position->x - wall_contact->normal.x * CLIMB_OFFSET;
+        checker->collider.position->z = player_collider->position->z - wall_contact->normal.z * CLIMB_OFFSET;
+        checker->collider.velocity = (struct Vector3){0.0f, -1.0f, 0.0f};
+     } else {
+        checker->position = (vector3_t){
+            .x = player_collider->position->x - wall_contact->normal.x * CLIMB_OFFSET,
+            .y = player_collider->position->y + max_grab_height,
+            .z = player_collider->position->z - wall_contact->normal.z * CLIMB_OFFSET,
+        };
+    }
+
     checker->collider.velocity = (struct Vector3){0.0f, -max_grab_height / fixed_time_step, 0.0f};
     checker->target_pos = checker->position;
+    checker->wall_collider_id = wall_contact->other_object;
     dynamic_object_wake(&checker->collider);
 }
 
@@ -213,9 +227,9 @@ grab_mode_t grab_checker_update(grab_checker_t* checker, dynamic_object_t* playe
 }
 
 void grab_checker_clear(grab_checker_t* checker) {
-    debugf("clear cast mode\n");
     checker->cast_mode = GRAB_MODE_NONE;
     checker->grab_mode = GRAB_MODE_NONE;
+    checker->climb_timer = 0;
 }
 
 void grab_checker_destroy(grab_checker_t* checker) {
