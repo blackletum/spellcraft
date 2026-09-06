@@ -53,6 +53,7 @@ void setup() {
 
     // scene_queue_next("rom:/scenes/fire_trials.scene#test");
     // scene_queue_next("rom:/scenes/fire_trials.scene#test2");
+    // scene_queue_next("rom:/scenes/fire_trials.scene#bossdoor");
     // scene_queue_next("rom:/scenes/fire_trials.scene#test_firespinroom");
 	
     scene_queue_next("rom:/scenes/fire_trials.scene");
