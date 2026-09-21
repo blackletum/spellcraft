@@ -4,6 +4,7 @@
 #include "../render/camera.h"
 #include "camera_animation.h"
 #include "camera_wall_checker.h"
+#include "../math/transform_single_axis.h"
 
 #define CAMERA_FOLLOW_DISTANCE  3.4f
 #define CAMERA_FOLLOW_HEIGHT    1.6f
@@ -29,7 +30,9 @@ struct camera_cached_calcuations {
 union camera_controller_state_data {
     struct {
         struct camera_animation* animation;
+        transform_sa_t relative_to;
         uint16_t current_frame;
+        uint8_t blend_frames;
     } animate;
     struct {
         bool moving_position;
@@ -72,7 +75,7 @@ void camera_look_at(struct camera_controller* controller, struct Vector3* target
 void camera_follow_player(struct camera_controller* controller);
 void camera_return(struct camera_controller* controller);
 void camera_behind_player(struct camera_controller* controller);
-void camera_play_animation(struct camera_controller* controller, struct camera_animation* animation);
+void camera_play_animation(struct camera_controller* controller, struct camera_animation* animation, transform_sa_t* relative_to);
 void camera_move_to(struct camera_controller* controller, struct Vector3* position, bool instant, bool move_target);
 void camera_set_fixed(struct camera_controller* controller, struct Vector3* position, struct Quaternion* rotation, float fov);
 

@@ -192,6 +192,24 @@ all_exits: $(SCENE_SOURCES:assets/scenes/%.blend=build/assets/scenes/%_exits.txt
 .PHONY: all_exits
 
 ###
+# cam_anim
+###
+
+CANIM_SOURCES := $(shell find assets/cam_anim -type f -name '*.blend' | sort)
+
+CANIM := $(CANIM_SOURCES:assets/cam_anim/%.blend=filesystem/cam_anim/%.canim)
+
+.SECONDEXPANSION:
+filesystem/cam_anim/%.canim: assets/cam_anim/%.blend
+	@mkdir -p $(dir $@)
+	@mkdir -p $(dir $(@:filesystem/cam_anim/%.canim=build/assets/cam_anim/%.canim))
+	echo $@ $<
+	$(BLENDER_5) $< --background --log-level fatal --addons fast64-main,mesh_export --python-exit-code 1 --python tools/mesh_export/cam_anim.py -- $(@:filesystem/cam_anim/%.canim=build/assets/cam_anim/%.canim)
+	$(MK_ASSET) -o $(dir $@) -w 256 $(@:filesystem/cam_anim/%.canim=build/assets/cam_anim/%.canim)
+	-cp $(@:filesystem/cam_anim/%.scene=build/assets/cam_anim/%.sanim) $(@:%.scene=%.sanim)
+
+
+###
 # microcode
 ###
 
@@ -228,9 +246,9 @@ TEST_SOURCES := $(shell find src/ -type f -name '*_test.c' | sort)
 TEST_SOURCE_OBJS := $(TEST_SOURCES:src/%.c=$(BUILD_DIR)/%.o)
 TEST_OBJS := $(SOURCE_OBJS) $(TEST_SOURCE_OBJS) $(UCODE_OBJS)
 
-filesystem/: $(SPRITES) $(TMESHES) $(MATERIALS) $(SCENES) $(REPAIRS) $(FONTS) $(SCRIPTS_COMPILED) $(SOUND_EFFECTS) $(MUSIC) filesystem/scripts/globals.dat
+filesystem/: $(SPRITES) $(TMESHES) $(MATERIALS) $(SCENES) $(CANIM) $(REPAIRS) $(FONTS) $(SCRIPTS_COMPILED) $(SOUND_EFFECTS) $(MUSIC) filesystem/scripts/globals.dat
 
-$(BUILD_DIR)/spellcraft.dfs: filesystem/ $(SPRITES) $(TMESHES) $(MATERIALS) $(SCENES) $(REPAIRS) $(FONTS) $(SCRIPTS_COMPILED) $(SOUND_EFFECTS) $(MUSIC) filesystem/scripts/globals.dat
+$(BUILD_DIR)/spellcraft.dfs: filesystem/ $(SPRITES) $(TMESHES) $(MATERIALS) $(SCENES) $(CANIM) $(REPAIRS) $(FONTS) $(SCRIPTS_COMPILED) $(SOUND_EFFECTS) $(MUSIC) filesystem/scripts/globals.dat
 $(BUILD_DIR)/spellcraft.elf: $(OBJS)
 $(BUILD_DIR)/spellcraft_test.elf: $(TEST_OBJS)
 

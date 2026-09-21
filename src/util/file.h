@@ -6,4 +6,6 @@
 // caller is responsible for freeing result
 char* file_read_string(FILE* file);
 
+char* filename_find_ext(char* filename);
+
 #endif

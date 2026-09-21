@@ -27,4 +27,8 @@ void hash_map_delete(struct hash_map* hash_map, int key);
 
 struct hash_map_entry* hash_map_next(struct hash_map* hash_map, struct hash_map_entry* curr);
 
+static inline bool hash_map_is_ready(hash_map_t* hash_map) {
+    return hash_map->capacity > 0;
+}
+
 #endif

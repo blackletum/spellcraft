@@ -85,34 +85,6 @@ void scene_load_fog(scene_fog_t* fog, FILE* file) {
     fread(&fog->color, 4, 1, file);
 }
 
-void scene_load_camera_animations(struct camera_animation_list* list, const char* filename, FILE* file) {
-    uint16_t count;
-    fread(&count, sizeof(count), 1, file);
-    camera_animation_list_init(list, count, 0);
-
-    int filename_len = strlen(filename);
-    char modified_filename[filename_len + 1];
-    strcpy(modified_filename, filename + strlen("rom:/"));
-    strcpy(modified_filename + filename_len - 10, "sanim");
-
-    list->rom_location = dfs_rom_addr(modified_filename);
-
-    for (int i = 0; i < count; ++i) {
-        uint8_t name_length;
-        fread(&name_length, 1, 1, file);
-        char* name = malloc(name_length + 1);
-        fread(name, name_length, 1, file);
-        name[name_length] = '\0';
-
-        struct camera_animation* animation = &list->animations[i];
-
-        animation->name = name;
-        fread(&animation->frame_count, sizeof(uint16_t), 1, file);
-        fread(&animation->rom_offset, sizeof(uint32_t), 1, file);
-        animation->rom_offset += list->rom_location;
-    }
-}
-
 room_entity_block_t* scene_load_entities(int room_count, FILE* file) {
     room_entity_block_t* room_entities = malloc(sizeof(room_entity_block_t) * room_count);
 
@@ -384,7 +356,7 @@ struct scene* scene_load(const char* filename) {
     fog_set(FOG_PRIORITY_SCENE, (fog_state_t){.color = scene->fog.color, .min = scene->fog.min, .max = scene->fog.max}, 0.0f);
     fread(&scene->clear_color, sizeof(color_t), 1, file);
 
-    scene_load_camera_animations(&scene->camera_animations, filename, file);
+    camera_animations_load(&scene->camera_animations, filename, file);
 
     scene_load_room_metadata(scene, file);
 

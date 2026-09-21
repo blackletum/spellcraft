@@ -232,7 +232,49 @@ void cutscene_cam_anim_init(cutscene_runner_context_t* context, int arg_count) {
     READ_ARGS(context, 1, arg_count, args);
     camera_play_animation(
         cutscene_get_camera_controller(), 
-        camera_animation_lookup(&current_scene->camera_animations, (char*)args[0])
+        camera_animation_lookup(&current_scene->camera_animations, (char*)args[0]),
+        NULL
+    );
+}
+
+// cam_anim_rel
+void cutscene_cam_anim_rel_init(cutscene_runner_context_t* context, int arg_count) {
+    READ_ARGS(context, 2, arg_count, args);
+
+    transform_sa_t relative_to;
+
+    dynamic_object_t* obj = collision_scene_find_object(args[1]);
+
+    if (!obj) {
+        return;
+    }
+
+    relative_to.position = *obj->position;
+
+    if (obj->rotation) {
+        relative_to.rotation = *obj->rotation;
+    } else {
+        relative_to.rotation = gRight2;
+    }
+
+    relative_to.scale = 1.0f;
+
+    camera_animation_t* animation;
+
+    camera_animation_list_t* anim_list = camera_animation_get(args[1]);
+
+    if (anim_list) {
+        animation = camera_animation_lookup(anim_list, (char*)args[0]);
+    }
+
+    if (!anim_list) {
+        animation = camera_animation_lookup(&current_scene->camera_animations, (char*)args[0]);
+    }
+
+    camera_play_animation(
+        cutscene_get_camera_controller(), 
+        animation,
+        &relative_to
     );
 }
 
@@ -625,6 +667,7 @@ static cutscene_step_fn_t function_steps[] = {
     [CUTSCENE_FN_TUTORIAL] = {.init = cutscene_tutorial_init, .step = cutscene_tutorial_step, .cancel = cutscene_tutorial_cancel}, // func tutorial(step: i32)
     {.init = cutscene_idle_npc_init }, // func idle_npc(npc: entity_id)
     {.init = cutscene_cam_anim_init }, // func cam_animate(animation: str)
+    {.init = cutscene_cam_anim_rel_init }, // func cam_anim_rel(animation: str, target: entity_id)
     {.init = cutscene_interact_with_location_init }, // func interact_with_location(interaction: i32, npc: entity_id, name: str)
     {.init = cutscene_show_title_init }, // func show_title(title: str)
     {.init = cutscene_look_at_subject_init }, // func look_at_subject()

@@ -12,6 +12,7 @@
 #include "../cutscene/cutscene_actor.h"
 #include "../effects/drop_shadow.h"
 #include "camera_controller.h"
+#include "camera_animation.h"
 
 #include "../spell/projectile.h"
 #include "../spell/spell_exec.h"
@@ -179,7 +180,7 @@ struct player {
     entity_id hover_interaction;
 
     camera_controller_t camera_controller;
-
+    camera_animation_list_t camera_animations;
 };
 
 typedef struct player player_t;

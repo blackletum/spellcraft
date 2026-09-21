@@ -1,7 +1,7 @@
 #ifndef __PROFILE_METRICS_H__
 #define __PROFILE_METRICS_H__
 
-#define ENABLE_METRICS      1
+#define ENABLE_METRICS      0
 
 enum performance_metric {
     PERFORMANCE_METRIC_RSP_TIME,

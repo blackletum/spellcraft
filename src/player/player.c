@@ -1656,6 +1656,13 @@ void player_unload_sound(struct player* player) {
     }
 }
 
+void player_init_cam_anim(player_t* player) {
+    char* filename = "rom:/cam_anim/player.canim";
+    FILE* file = asset_fopen(filename, NULL);
+    camera_animations_load(&player->camera_animations, filename, file);
+    fclose(file);
+}
+
 void player_init(struct player* player, struct player_definition* definition) {
     transformSaInitIdentity(&player->cutscene_actor.transform);
     renderable_single_axis_init(&player->renderable, &player->cutscene_actor.transform, "rom:/meshes/characters/apprentice.tmesh");
@@ -1736,6 +1743,8 @@ void player_init(struct player* player, struct player_definition* definition) {
     player->hover_interaction = 0;
 
     camera_controller_init(&player->camera_controller, player);
+    player_init_cam_anim(player);
+    camera_animation_map(&player->camera_animations, ENTITY_ID_PLAYER);
 }
 
 void player_destroy(struct player* player) {
@@ -1759,4 +1768,6 @@ void player_destroy(struct player* player) {
     player_unload_sound(player);
 
     camera_controller_destroy(&player->camera_controller);
+    camera_animation_list_destroy(&player->camera_animations);
+    camera_animation_unmap(ENTITY_ID_PLAYER);
 }

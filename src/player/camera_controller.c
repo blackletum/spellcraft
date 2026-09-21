@@ -371,20 +371,32 @@ void camera_controller_update_animation(struct camera_controller* controller) {
         sizeof(struct camera_animation_frame)
     );
 
-    controller->stable_position = anim_frame_buffer.position;
-    controller->camera.transform.rotation.x = anim_frame_buffer.rotation[0];
-    controller->camera.transform.rotation.y = anim_frame_buffer.rotation[1];
-    controller->camera.transform.rotation.z = anim_frame_buffer.rotation[2];
+    transformSaTransformPoint(
+        &controller->state_data.animate.relative_to, 
+        &anim_frame_buffer.position, 
+        &controller->stable_position
+    );
 
-    float neg_w = controller->camera.transform.rotation.x * controller->camera.transform.rotation.x 
-        + controller->camera.transform.rotation.y * controller->camera.transform.rotation.y 
-        + controller->camera.transform.rotation.z * controller->camera.transform.rotation.z;
+    quaternion_t unpacked_rotation;
+
+    unpacked_rotation.x = anim_frame_buffer.rotation[0];
+    unpacked_rotation.y = anim_frame_buffer.rotation[1];
+    unpacked_rotation.z = anim_frame_buffer.rotation[2];
+
+    float neg_w = unpacked_rotation.x * unpacked_rotation.x 
+        + unpacked_rotation.y * unpacked_rotation.y 
+        + unpacked_rotation.z * unpacked_rotation.z;
 
     if (neg_w > 1.0f) {
         neg_w = 1.0f;
     }
 
-    controller->camera.transform.rotation.w = sqrtf(1.0f - neg_w);
+    unpacked_rotation.w = sqrtf(1.0f - neg_w);
+
+    quaternion_t relative_rotation;
+    quatAxisComplex(&gUp, &controller->state_data.animate.relative_to.rotation, &relative_rotation);
+
+    quatMultiply(&relative_rotation, &unpacked_rotation, &controller->camera.transform.rotation);
     controller->camera.fov = (180.0f / M_PI) * anim_frame_buffer.fov;
     controller->state_data.animate.current_frame += 1;
     camera_look_at_from_rotation(controller);
@@ -511,10 +523,16 @@ void camera_behind_player(struct camera_controller* controller) {
     controller->state_data.return_to_player.move_behind = true;
 }
 
-void camera_play_animation(struct camera_controller* controller, struct camera_animation* animation) {
+void camera_play_animation(struct camera_controller* controller, struct camera_animation* animation, transform_sa_t* relative_to) {
     controller->state = CAMERA_STATE_ANIMATE;
     controller->state_data.animate.animation = animation;
     controller->state_data.animate.current_frame = 0;
+    if (relative_to) {
+        controller->state_data.animate.relative_to = *relative_to;
+    } else {
+        transformSaInitIdentity(&controller->state_data.animate.relative_to);
+    }
+    controller->state_data.animate.blend_frames = 0;
 }
 
 void camera_move_to(struct camera_controller* controller, struct Vector3* position, bool instant, bool move_target) {
