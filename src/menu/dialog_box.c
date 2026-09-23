@@ -188,7 +188,7 @@ void dialog_box_show(char* message, int* args, dialog_end_callback end_callback,
     dialog_box.current_message = dialog_box.current_text;
 
     menu_add_callback(dialog_box_render, &dialog_box, MENU_PRIORITY_DIALOG);
-    update_add(&dialog_box, dialog_box_update, UPDATE_PRIORITY_PLAYER, UPDATE_LAYER_DIALOG);
+    update_add(&dialog_box, dialog_box_update, UPDATE_PRIORITY_PLAYER, UPDATE_LAYER_DIALOG | UPDATE_LAYER_PAUSE_MENU);
 
     dialog_box.current_message_start = dialog_box.current_message;
     dialog_box.current_message_end = dialog_box.current_message;

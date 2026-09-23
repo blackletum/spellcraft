@@ -141,3 +141,8 @@ void pause_menu_destroy(struct pause_menu* pause_menu) {
     spell_menu_destroy(&pause_menu->spell_menu);
     menu_remove_callback(pause_menu);
 }
+
+void pause_menu_rune_upgrade(struct pause_menu* pause_menu, inventory_item_type_t rune) {
+    pause_menu_transition(pause_menu, ACTIVE_MENU_SPELLS, NULL);
+    spell_menu_show_rune_upgrade(&pause_menu->spell_menu, rune);
+}

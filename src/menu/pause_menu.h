@@ -27,4 +27,6 @@ struct pause_menu {
 void pause_menu_init(struct pause_menu* pause_menu);
 void pause_menu_destroy(struct pause_menu* pause_menu);
 
+void pause_menu_rune_upgrade(struct pause_menu* pause_menu, inventory_item_type_t rune);
+
 #endif

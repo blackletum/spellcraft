@@ -369,6 +369,16 @@ void cutscene_builder_camera_look_at_pos(struct cutscene_builder* builder, struc
     cutscene_builder_call_function(builder, CUTSCENE_FN_CAMERA_LOOK_AT_POS, 4, 0);
 }
 
+void cutscene_builder_camera_animate(cutscene_builder_t* builder, const char* name, entity_id relative_to) {
+    cutscene_builder_message(builder, name);
+
+    expression_builder_t expr;
+    expression_builder_init(&expr);
+    expression_builder_load_literal(&expr, relative_to);
+    cutscene_builder_expression(builder, &expr);
+    cutscene_builder_call_function(builder, CUTSCENE_FN_CAMERA_ANIMATE, 2, 0);
+}
+
 void cutscene_builder_set_boolean(struct cutscene_builder* builder, boolean_variable variable, bool value) {
     struct cutscene_step* expression = cutscene_builder_next_step(builder);
     struct cutscene_step* set = cutscene_builder_next_step(builder);
@@ -434,6 +444,53 @@ void cutscene_builder_fade(struct cutscene_builder* builder, enum fade_colors co
     cutscene_builder_expression(builder, &expr);
 
     cutscene_builder_call_function(builder, CUTSCENE_FN_LOAD_FADE, 2, 0);
+}
+
+void cutscene_builder_show_rune_upgrade(cutscene_builder_t* builder, inventory_item_type_t type) {
+    expression_builder_t expr;
+    expression_builder_init(&expr);
+    expression_builder_load_literal(&expr, type);
+    cutscene_builder_expression(builder, &expr);
+    cutscene_builder_call_function(builder, CUTSCENE_FN_RUNE_UPGRADE, 1, 0);
+}
+
+void cutscene_builder_snap_to_pos(cutscene_builder_t* builder, entity_id target, vector3_t* pos) {
+    expression_builder_t expr;
+    expression_builder_init(&expr);
+    expression_builder_load_literal(&expr, target);
+    expression_builder_load_float(&expr, pos->x);
+    expression_builder_load_float(&expr, pos->y);
+    expression_builder_load_float(&expr, pos->z);
+    cutscene_builder_expression(builder, &expr);
+
+    cutscene_builder_call_function(builder, CUTSCENE_FN_SNAP_TO_POS, 4, 0);
+}
+
+void cutscene_builder_snap_to_rot(cutscene_builder_t* builder, entity_id target, vector2_t* rot) {
+    expression_builder_t expr;
+    expression_builder_init(&expr);
+    expression_builder_load_literal(&expr, target);
+    expression_builder_load_float(&expr, rot->x);
+    expression_builder_load_float(&expr, rot->y);
+    cutscene_builder_expression(builder, &expr);
+
+    cutscene_builder_call_function(builder, CUTSCENE_FN_SNAP_TO_ROT, 3, 0);
+}
+
+void cutscene_builder_npc_animate(cutscene_builder_t* builder, entity_id target, const char* name, bool loop) {
+    expression_builder_t expr;
+    expression_builder_init(&expr);
+    expression_builder_load_literal(&expr, target);
+    cutscene_builder_expression(builder, &expr);
+
+    cutscene_builder_message(builder, name);
+    
+    expression_builder_init(&expr);
+    expression_builder_load_literal(&expr, loop);
+    cutscene_builder_expression(builder, &expr);
+
+    cutscene_builder_call_function(builder, CUTSCENE_FN_NPC_ANIMATE, 3, 0);
+    
 }
 
 // release with cutscene_free()

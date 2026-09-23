@@ -13,6 +13,9 @@ struct rune_upgrade {
 
     dynamic_object_t collider;
     interactable_t interactable;
+
+    integer_variable rune_level;
+    boolean_variable has_item;
 };
 
 typedef struct rune_upgrade rune_upgrade_t;

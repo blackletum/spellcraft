@@ -229,45 +229,31 @@ void cutscene_cam_behind_player_init(cutscene_runner_context_t* context, int arg
 
 // cam_animate
 void cutscene_cam_anim_init(cutscene_runner_context_t* context, int arg_count) {
-    READ_ARGS(context, 1, arg_count, args);
-    camera_play_animation(
-        cutscene_get_camera_controller(), 
-        camera_animation_lookup(&current_scene->camera_animations, (char*)args[0]),
-        NULL
-    );
-}
-
-// cam_anim_rel
-void cutscene_cam_anim_rel_init(cutscene_runner_context_t* context, int arg_count) {
     READ_ARGS(context, 2, arg_count, args);
 
     transform_sa_t relative_to;
 
     dynamic_object_t* obj = collision_scene_find_object(args[1]);
 
-    if (!obj) {
-        return;
-    }
+    if (obj) {
+        relative_to.position = *obj->position;
 
-    relative_to.position = *obj->position;
+        if (obj->rotation) {
+            relative_to.rotation = *obj->rotation;
+        } else {
+            relative_to.rotation = gRight2;
+        }
 
-    if (obj->rotation) {
-        relative_to.rotation = *obj->rotation;
+        relative_to.scale = 1.0f;
     } else {
-        relative_to.rotation = gRight2;
+        transformSaInitIdentity(&relative_to);
     }
 
-    relative_to.scale = 1.0f;
+    camera_animation_t* animation = NULL;
 
-    camera_animation_t* animation;
+    animation = camera_animation_lookup(camera_animation_get(args[1]), (char*)args[0]);
 
-    camera_animation_list_t* anim_list = camera_animation_get(args[1]);
-
-    if (anim_list) {
-        animation = camera_animation_lookup(anim_list, (char*)args[0]);
-    }
-
-    if (!anim_list) {
+    if (!animation) {
         animation = camera_animation_lookup(&current_scene->camera_animations, (char*)args[0]);
     }
 
@@ -499,6 +485,38 @@ void cutscene_tutorial_init(cutscene_runner_context_t* context, int arg_count) {
     tutorial_set_step(args[0]);
 }
 
+// show_rune_upgrade
+void cutscene_show_rune_upgrade(cutscene_runner_context_t* context, int arg_count) {
+    READ_ARGS(context, 1, arg_count, args);
+    pause_menu_rune_upgrade(&current_scene->pause_menu, (inventory_item_type_t)args[0]);
+}
+
+// snap_to_pos
+void cutscene_snap_to_pos(cutscene_runner_context_t* context, int arg_count) {
+    READ_ARGS(context, 4, arg_count, args);
+
+    vector3_t* pos = (vector3_t*)(args+1);
+    
+    dynamic_object_t* obj = collision_scene_find_object(args[0]);
+
+    if (obj) {
+        *obj->position = *pos;
+    }
+}
+
+// snap_to_rot
+void cutscene_snap_to_rot(cutscene_runner_context_t* context, int arg_count) {
+    READ_ARGS(context, 3, arg_count, args);
+
+    vector2_t* rot = (vector2_t*)(args+1);
+    
+    dynamic_object_t* obj = collision_scene_find_object(args[0]);
+
+    if (obj && obj->rotation) {
+        *obj->rotation = *rot;
+    }
+}
+
 bool cutscene_tutorial_step(cutscene_runner_context_t* context) {
     return !tutorial_is_running();
 }
@@ -653,6 +671,7 @@ static cutscene_step_fn_t function_steps[] = {
     [CUTSCENE_FN_NPC_SET_SPEED] = {.init = cutscene_set_npc_speed_init }, // func npc_set_speed(npc: entity_id, speed: float)
     [CUTSCENE_FN_INTERACT_POSITION] = {.init = cutscene_interact_with_position_init }, // func interact_with_position(interaction: i32, npc: entity_id, x: float, y: float, z: float)
     [CUTSCENE_FN_NPC_WAIT] = {.init = cutscene_npc_wait_init, .step = cutscene_npc_wait_step }, // func npc_wait(npc: entity_id)
+    [CUTSCENE_FN_NPC_ANIMATE] = {.init = cutscene_npc_animate_init }, // func npc_animate(npc: entity_id, animation: str, loop: bool)
     [CUTSCENE_FN_CAMERA_WAIT] = {.init = cutscene_camera_wait_init, .step = cutscene_camera_wait_step }, // func cam_wait()
     [CUTSCENE_FN_CAMERA_FOLLOW] = {.init = cutscene_cam_follow_player_init }, // func cam_follow()
     [CUTSCENE_FN_CAMERA_RETURN] = {.init = cutscene_cam_return_init }, // func cam_return()
@@ -660,18 +679,19 @@ static cutscene_step_fn_t function_steps[] = {
     [CUTSCENE_FN_CAMERA_LOOK_AT_NPC] = {.init = cutscene_camera_look_at_npc_init }, // func cam_look_npc(target: entity_id)
     [CUTSCENE_FN_CAMERA_MOVE_TO] = {.init = cutscene_cam_move_to_init }, // func cam_move_to_pos(x: float, y: float, z: float, instant: bool)
     [CUTSCENE_FN_CAMERA_LOOK_AT_POS] = {.init = cutscene_cam_look_at_init }, // func cam_look_at_pos(x: float, y: float, z: float, instant: bool)
+    [CUTSCENE_FN_CAMERA_ANIMATE] = {.init = cutscene_cam_anim_init }, // func cam_animate(animation: str, relative_to: entity_id)
     [CUTSCENE_FN_LOAD_SCENE] = {.init = cutscene_load_scene_init }, // func load_scene(scene_name: str)
     [CUTSCENE_FN_LOAD_FADE] = {.init = cutscene_fade_init }, // func fade(fade_to: i32, duration: float)
     [CUTSCENE_FN_COMM_STONE_START] = {.init = cutscene_comm_stone_start_init, .step = cutscene_comm_stone_start_step}, // func comm_stone_start()
     [CUTSCENE_FN_COMM_STONE_END] = {.init = cutscene_comm_stone_end_init, .step = cutscene_comm_stone_end_step, .cancel = cutscene_comm_cancel}, // func comm_stone_end()
     [CUTSCENE_FN_TUTORIAL] = {.init = cutscene_tutorial_init, .step = cutscene_tutorial_step, .cancel = cutscene_tutorial_cancel}, // func tutorial(step: i32)
+    [CUTSCENE_FN_RUNE_UPGRADE] = { .init = cutscene_show_rune_upgrade }, // func show_rune_upgrade(inventory_type: i32)
+    [CUTSCENE_FN_SNAP_TO_POS]= { .init = cutscene_snap_to_pos }, // func snap_to_pos(target: entity_id, x: float, y: float, z: float)
+    [CUTSCENE_FN_SNAP_TO_ROT]= { .init = cutscene_snap_to_rot }, // func snap_to_rot(target: entity_id, x: float, y: float, z: float)
     {.init = cutscene_idle_npc_init }, // func idle_npc(npc: entity_id)
-    {.init = cutscene_cam_anim_init }, // func cam_animate(animation: str)
-    {.init = cutscene_cam_anim_rel_init }, // func cam_anim_rel(animation: str, target: entity_id)
     {.init = cutscene_interact_with_location_init }, // func interact_with_location(interaction: i32, npc: entity_id, name: str)
     {.init = cutscene_show_title_init }, // func show_title(title: str)
     {.init = cutscene_look_at_subject_init }, // func look_at_subject()
-    {.init = cutscene_npc_animate_init }, // func npc_animate(npc: entity_id, animation: str, loop: bool)
     {.init = cutscene_print_init }, // func print(title: str)
     {.init = cutscene_spawn_init }, // func spawn(spawner: entity_spawner)
     {.init = cutscene_despawn_init }, // func despawn(entity: entity_id)

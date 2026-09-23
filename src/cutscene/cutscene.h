@@ -197,11 +197,16 @@ void cutscene_builder_camera_return(struct cutscene_builder* builder);
 void cutscene_builder_camera_look_at(struct cutscene_builder* builder, entity_id target);
 void cutscene_builder_camera_move_to(struct cutscene_builder* builder, struct Vector3* position, bool instant);
 void cutscene_builder_camera_look_at_pos(struct cutscene_builder* builder, struct Vector3* position, bool instant);
+void cutscene_builder_camera_animate(cutscene_builder_t* builder, const char* name, entity_id relative_to);
 void cutscene_builder_set_boolean(struct cutscene_builder* builder, boolean_variable variable, bool value);
 void cutscene_builder_callback(struct cutscene_builder* builder, cutscene_step_callback callback, void* data);
 void cutscene_builder_expression(struct cutscene_builder* builder, expression_builder_t* expression);
 void cutscene_builder_load_scene(struct cutscene_builder* builder, const char* scene);
 void cutscene_builder_fade(struct cutscene_builder* builder, enum fade_colors color, float duration);
+void cutscene_builder_show_rune_upgrade(cutscene_builder_t* builder, inventory_item_type_t type);
+void cutscene_builder_snap_to_pos(cutscene_builder_t* builder, entity_id target, vector3_t* pos);
+void cutscene_builder_snap_to_rot(cutscene_builder_t* builder, entity_id target, vector2_t* rot);
+void cutscene_builder_npc_animate(cutscene_builder_t* builder, entity_id target, const char* name, bool loop);
 
 struct cutscene* cutscene_builder_finish(struct cutscene_builder* builder);
 

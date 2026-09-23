@@ -25,6 +25,10 @@ void camera_animation_list_destroy(struct camera_animation_list* list) {
 }
 
 struct camera_animation* camera_animation_lookup(struct camera_animation_list* list, const char* name) {
+    if (!list) {
+        return NULL;
+    }
+
     struct camera_animation* end = list->animations + list->animation_count;
 
     for (struct camera_animation* curr = list->animations; curr < end; ++curr) {
@@ -47,6 +51,8 @@ void camera_animations_load(struct camera_animation_list* list, const char* file
     strcpy(filename_find_ext(modified_filename), ".sanim");
 
     list->rom_location = dfs_rom_addr(modified_filename);
+
+    assert(list->rom_location);
 
     for (int i = 0; i < count; ++i) {
         uint8_t name_length;
