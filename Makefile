@@ -236,7 +236,10 @@ build/blender_results.txt: $(EXPORT_SOURCE)
 # source code
 ###
 
-SOURCES := $(shell find src/ ! -name '*_test.c' ! -name 'main.c' ! -name 'inventory_mapping.c' -type f -name '*.c' | sort) src/player/inventory_mapping.c
+src/entity/fields.h src/entity/fields.c: tools/type_field_checker.py src/scene/scene_definition.h
+	python3 tools/type_field_checker.py src/scene/scene_definition.h src/entity/fields.c
+
+SOURCES := $(shell find src/ ! -name '*_test.c' ! -name 'main.c' ! -name 'inventory_mapping.c' ! -name 'fields.c' -type f -name '*.c' | sort) src/player/inventory_mapping.c src/entity/fields.c
 SOURCE_OBJS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
 UCODES := $(shell find src/ -type f -name '*.S' | sort)
 UCODE_OBJS := $(UCODES:src/%.S=$(BUILD_DIR)/%.o)

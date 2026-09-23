@@ -198,19 +198,10 @@ struct_format_defaults = {
     'any_variable': 0xFFFF,
 }
 
-_string_aliases = {
-    'script_location',
-    'scene_entry_point',
-    'mesh_location',
-}
-
 SENSOR_SIZE = 36
 
-def _is_string_type(definition):
-    return isinstance(definition, struct_parse.PointerType) and definition.sub_type == 'char' or definition in _string_aliases
-
 def _get_string_value(obj: bpy.types.Object, definition, field_name: str | None, context: SerializeContext) -> str | None:
-    if not _is_string_type(definition):
+    if not struct_parse.is_string_type(definition):
         return None
 
     if definition == 'mesh_location':
@@ -300,7 +291,7 @@ def _apply_alignment(current_offset: int, alignment: int) -> int:
     return (current_offset + alignment - 1) & ~(alignment - 1)
 
 def obj_determine_alignment(definition, context: SerializeContext) -> int:
-    if _is_string_type(definition):
+    if struct_parse.is_string_type(definition):
         return 4
     
     if isinstance(definition, str):
@@ -481,7 +472,7 @@ class TypeLocation():
 def _obj_gather_types(definition, context: SerializeContext, current_offset: int) -> int:
     current_offset = _apply_alignment(current_offset, obj_determine_alignment(definition, context))
 
-    if _is_string_type(definition):
+    if struct_parse.is_string_type(definition):
         return current_offset + 4
     
     if isinstance(definition, str):
@@ -507,3 +498,4 @@ def _obj_gather_types(definition, context: SerializeContext, current_offset: int
 def obj_gather_types(definition, context: SerializeContext) -> int:
     result = _obj_gather_types(definition, context, 0)
     return _apply_alignment(result, obj_determine_alignment(definition, context))
+

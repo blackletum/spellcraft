@@ -33,6 +33,7 @@
 #include "../entities/pulley_gate.h"
 #include "../entities/dynamic_water.h"
 #include "../entities/cut_rope.h"
+#include "../entities/rune_upgrade.h"
 // include_list insert point
 
 #include "../puzzle/bool_and_logic.h"
@@ -48,7 +49,9 @@
 
 #include "../pickups/mana_plant.h"
 
-#define ENTITY_DEFINITION(name, fields) [ENTITY_TYPE_ ## name] = { \
+#include "fields.h"
+
+#define ENTITY_DEFINITION(name) [ENTITY_TYPE_ ## name] = { \
     #name, \
     (entity_init)name ## _init, \
     (entity_destroy)name ## _destroy, \
@@ -56,102 +59,54 @@
     name ## _common_destroy, \
     sizeof(struct name), \
     sizeof(struct name ## _definition), \
-    fields, \
-    sizeof(fields) / sizeof(*fields), \
+    fields_ ## name, \
+    FIELD_COUNT_ ## name, \
     ENTITY_TYPE_ ## name \
 }
 
-static struct entity_field_type_location fields_empty[] = {};
-
-static struct entity_field_type_location fields_npc[] = {
-    { .offset = offsetof(struct npc_definition, dialog), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_script_runner[] = {
-    { .offset = offsetof(struct script_runner_definition, target), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_room_portal[] = {
-    { .offset = offsetof(struct room_portal_definition, mesh), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_burning_thorns[] = {
-    { .offset = offsetof(struct burning_thorns_definition, mesh), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_sign[] = {
-    { .offset = offsetof(struct sign_definition, message), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_line_mesh[] = {
-    { .offset = offsetof(struct line_mesh_definition, mesh), .type = ENTITY_FIELD_TYPE_LINE_MESH },
-};
-
-static struct entity_field_type_location fields_repair_scene[] = {
-    { .offset = offsetof(struct repair_scene_definition, exit_scene), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_repair_part[] = {
-    { .offset = offsetof(struct repair_part_definition, mesh), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_item_pickup[] = {
-    { .offset = offsetof(struct item_pickup_definition, mesh), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_repair_interaction[] = {
-    { .offset = offsetof(struct repair_interaction_definition, broken_mesh), .type = ENTITY_FIELD_TYPE_STRING },
-    { .offset = offsetof(struct repair_interaction_definition, repaired_mesh), .type = ENTITY_FIELD_TYPE_STRING },
-    { .offset = offsetof(struct repair_interaction_definition, on_interact), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
-static struct entity_field_type_location fields_dynamic_water[] = {
-    { .offset = offsetof(struct dynamic_water_definition, mesh), .type = ENTITY_FIELD_TYPE_STRING },
-    { .offset = offsetof(struct dynamic_water_definition, mesh_lod1), .type = ENTITY_FIELD_TYPE_STRING },
-};
-
 static struct entity_definition scene_entity_definitions[ENTITY_TYPE_count] = {
-    ENTITY_DEFINITION(empty, fields_empty),
-    ENTITY_DEFINITION(biter, fields_empty),
-    ENTITY_DEFINITION(collectable, fields_empty),
-    ENTITY_DEFINITION(crate, fields_empty),
-    ENTITY_DEFINITION(ground_torch, fields_empty),
-    ENTITY_DEFINITION(npc, fields_npc),
-    ENTITY_DEFINITION(training_dummy, fields_empty),
-    ENTITY_DEFINITION(treasure_chest, fields_empty),
-    ENTITY_DEFINITION(water_cube, fields_empty),
-    ENTITY_DEFINITION(mana_plant, fields_empty),
-    ENTITY_DEFINITION(jelly, fields_empty),
-    ENTITY_DEFINITION(jelly_king, fields_empty),
-    ENTITY_DEFINITION(door, fields_empty),
-    ENTITY_DEFINITION(timed_torch_puzzle, fields_empty),
-    ENTITY_DEFINITION(elevator, fields_empty),
-    ENTITY_DEFINITION(room_portal, fields_room_portal),
-    ENTITY_DEFINITION(burning_thorns, fields_burning_thorns),
-    ENTITY_DEFINITION(bool_and_logic, fields_empty),
-    ENTITY_DEFINITION(camera_focus, fields_empty),
-    ENTITY_DEFINITION(sign, fields_sign),
-    ENTITY_DEFINITION(electric_ball, fields_empty),
-    ENTITY_DEFINITION(electric_ball_grabber, fields_empty),
-    ENTITY_DEFINITION(electric_ball_dropper, fields_empty),
-    ENTITY_DEFINITION(step_switch, fields_empty),
-    ENTITY_DEFINITION(pottery_wheel, fields_empty),
-    ENTITY_DEFINITION(fan_switch, fields_empty),
-    ENTITY_DEFINITION(trigger_cube, fields_empty),
-    ENTITY_DEFINITION(line_mesh, fields_line_mesh),
-    ENTITY_DEFINITION(script_runner, fields_script_runner),
-    ENTITY_DEFINITION(golem_enemy, fields_empty),
-    ENTITY_DEFINITION(pinwheel, fields_empty),
-    ENTITY_DEFINITION(breakable, fields_empty),
-    ENTITY_DEFINITION(jelly_pot, fields_empty),
-    ENTITY_DEFINITION(comm_stone, fields_empty),
-    ENTITY_DEFINITION(repair_scene, fields_repair_scene),
-    ENTITY_DEFINITION(repair_part, fields_repair_part),
-    ENTITY_DEFINITION(item_pickup, fields_item_pickup),
-    ENTITY_DEFINITION(repair_interaction, fields_repair_interaction),
-    ENTITY_DEFINITION(pulley_gate, fields_empty),
-    ENTITY_DEFINITION(dynamic_water, fields_dynamic_water),
-    ENTITY_DEFINITION(cut_rope, fields_empty),
+    ENTITY_DEFINITION(empty),
+    ENTITY_DEFINITION(biter),
+    ENTITY_DEFINITION(collectable),
+    ENTITY_DEFINITION(crate),
+    ENTITY_DEFINITION(ground_torch),
+    ENTITY_DEFINITION(npc),
+    ENTITY_DEFINITION(training_dummy),
+    ENTITY_DEFINITION(treasure_chest),
+    ENTITY_DEFINITION(water_cube),
+    ENTITY_DEFINITION(mana_plant),
+    ENTITY_DEFINITION(jelly),
+    ENTITY_DEFINITION(jelly_king),
+    ENTITY_DEFINITION(door),
+    ENTITY_DEFINITION(timed_torch_puzzle),
+    ENTITY_DEFINITION(elevator),
+    ENTITY_DEFINITION(room_portal),
+    ENTITY_DEFINITION(burning_thorns),
+    ENTITY_DEFINITION(bool_and_logic),
+    ENTITY_DEFINITION(camera_focus),
+    ENTITY_DEFINITION(sign),
+    ENTITY_DEFINITION(electric_ball),
+    ENTITY_DEFINITION(electric_ball_grabber),
+    ENTITY_DEFINITION(electric_ball_dropper),
+    ENTITY_DEFINITION(step_switch),
+    ENTITY_DEFINITION(pottery_wheel),
+    ENTITY_DEFINITION(fan_switch),
+    ENTITY_DEFINITION(trigger_cube),
+    ENTITY_DEFINITION(line_mesh),
+    ENTITY_DEFINITION(script_runner),
+    ENTITY_DEFINITION(golem_enemy),
+    ENTITY_DEFINITION(pinwheel),
+    ENTITY_DEFINITION(breakable),
+    ENTITY_DEFINITION(jelly_pot),
+    ENTITY_DEFINITION(comm_stone),
+    ENTITY_DEFINITION(repair_scene),
+    ENTITY_DEFINITION(repair_part),
+    ENTITY_DEFINITION(item_pickup),
+    ENTITY_DEFINITION(repair_interaction),
+    ENTITY_DEFINITION(pulley_gate),
+    ENTITY_DEFINITION(dynamic_water),
+    ENTITY_DEFINITION(cut_rope),
+    ENTITY_DEFINITION(rune_upgrade),
     // scene_entity_definitions insert point
 };
 

@@ -109,6 +109,12 @@
             "type": "room_portal"
         },
         {
+            "name": "objects_rune_upgrade_fire",
+            "description": "",
+            "mesh": "meshes/objects/rune_upgrade/fire.blend#rune_upgrade_fire",
+            "type": "rune_upgrade"
+        },
+        {
             "name": "objects_sign",
             "description": "",
             "mesh": "meshes/objects/sign.blend#sign",

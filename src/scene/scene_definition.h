@@ -51,6 +51,7 @@ enum entity_type_id {
     ENTITY_TYPE_pulley_gate,
     ENTITY_TYPE_dynamic_water,
     ENTITY_TYPE_cut_rope,
+    ENTITY_TYPE_rune_upgrade,
     // type enum insert point
     
     ENTITY_TYPE_count,
@@ -462,6 +463,14 @@ struct pulley_gate_definition {
 struct cut_rope_definition {
     struct Vector3 position;
     entity_spawner connected_to;
+};
+
+struct rune_upgrade_definition {
+    struct Vector3 position;    
+    struct Vector2 rotation;
+    mesh_location mesh;
+    integer_variable rune_level;
+    boolean_variable has_item;
 };
 
 // definition insert point

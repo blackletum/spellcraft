@@ -416,6 +416,15 @@ def find_enums(file_string: str) -> dict[str, EnumInfo]:
 
     return result
 
+_string_aliases = {
+    'script_location',
+    'scene_entry_point',
+    'mesh_location',
+}
+
+def is_string_type(definition):
+    return isinstance(definition, PointerType) and definition.sub_type == 'char' or definition in _string_aliases
+
 
 def find_structs(file_string: str) -> dict[str, StructureInfo]:
     parse_state = ParseState(tokenize(file_string, 0), file_string)
