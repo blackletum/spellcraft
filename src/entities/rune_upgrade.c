@@ -13,6 +13,17 @@ static vector3_t player_cutscene_offset = {
     1.8f,
 };
 
+void rune_upgrade_update(void* data) {
+    rune_upgrade_t* rune_upgrade = (rune_upgrade_t*)data;
+    animator_update(&rune_upgrade->animator, fixed_time_step);
+}
+
+void rune_upgrade_revert_idle(void* data) {
+    rune_upgrade_t* rune_upgrade = (rune_upgrade_t*)data;    
+    animator_run_clip(&rune_upgrade->animator, animation_set_find_clip(rune_upgrade->animations, "idle"), 0.0f, false);
+    rune_upgrade->animator.blend_frames = 0;
+}
+
 void rune_upgrade_interact(interactable_t* interactable, entity_id from) {
     rune_upgrade_t* rune_upgrade = (rune_upgrade_t*)interactable->data;
 
@@ -22,6 +33,8 @@ void rune_upgrade_interact(interactable_t* interactable, entity_id from) {
 
     expression_set_integer(rune_upgrade->rune_level, expression_get_integer(rune_upgrade->rune_level) + 1);
     interactable->interact_type = INTERACT_TYPE_NONE;
+
+    animator_run_clip(&rune_upgrade->animator, animation_set_find_clip(rune_upgrade->animations, "get_rune"), 0.0f, false);
 
     cutscene_builder_t cutscene;
 
@@ -33,12 +46,14 @@ void rune_upgrade_interact(interactable_t* interactable, entity_id from) {
     vector2_t player_rot;
     vector2Negate(&rune_upgrade->transform.rotation, &player_rot);
 
+    cutscene_builder_pause(&cutscene, true, false);
     cutscene_builder_snap_to_pos(&cutscene, ENTITY_ID_PLAYER, &player_pos);
     cutscene_builder_snap_to_rot(&cutscene, ENTITY_ID_PLAYER, &player_rot);
     cutscene_builder_camera_animate(&cutscene, "get_rune", ENTITY_ID_PLAYER);
-    cutscene_builder_npc_animate(&cutscene, ENTITY_ID_PLAYER, "comm_stone_start", false);
+    cutscene_builder_npc_animate(&cutscene, ENTITY_ID_PLAYER, "get_rune", false);
     cutscene_builder_camera_wait(&cutscene);
     cutscene_builder_camera_return(&cutscene);
+    cutscene_builder_callback(&cutscene, rune_upgrade_revert_idle, rune_upgrade);
 
     cutscene_builder_show_rune_upgrade(&cutscene, SPELL_SYMBOL_FIRE);
 
@@ -56,6 +71,12 @@ void rune_upgrade_init(rune_upgrade_t* rune_upgrade, struct rune_upgrade_definit
 
     renderable_single_axis_init(&rune_upgrade->renderable, &rune_upgrade->transform, definition->mesh);
     render_scene_add_renderable(&rune_upgrade->renderable, 0.0f);
+
+    animator_init(&rune_upgrade->animator, rune_upgrade->renderable.mesh_render.armature.bone_count);
+    renderable_set_animator(&rune_upgrade->renderable, &rune_upgrade->animator);
+    update_add(rune_upgrade, rune_upgrade_update, UPDATE_PRIORITY_EFFECTS, UPDATE_LAYER_CUTSCENE | UPDATE_LAYER_WORLD);
+
+    rune_upgrade->animations = animation_cache_load("rom:/meshes/objects/rune_upgrade/fire.anim");
 
     dynamic_object_init(
         entity_id,
@@ -87,6 +108,9 @@ void rune_upgrade_destroy(rune_upgrade_t* rune_upgrade, struct rune_upgrade_defi
     collision_scene_remove(&rune_upgrade->collider);
 
     interactable_destroy(&rune_upgrade->interactable);
+
+    animator_destroy(&rune_upgrade->animator);
+    animation_cache_release(rune_upgrade->animations);
 }
 
 void rune_upgrade_common_init() {

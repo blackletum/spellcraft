@@ -10,6 +10,7 @@ struct rune_upgrade {
     transform_sa_t transform;
     renderable_t renderable;
     animator_t animator;
+    animation_set_t* animations;
 
     dynamic_object_t collider;
     interactable_t interactable;

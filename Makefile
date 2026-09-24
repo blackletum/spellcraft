@@ -206,7 +206,7 @@ filesystem/cam_anim/%.canim: assets/cam_anim/%.blend
 	echo $@ $<
 	$(BLENDER_5) $< --background --log-level fatal --addons fast64-main,mesh_export --python-exit-code 1 --python tools/mesh_export/cam_anim.py -- $(@:filesystem/cam_anim/%.canim=build/assets/cam_anim/%.canim)
 	$(MK_ASSET) -o $(dir $@) -w 256 $(@:filesystem/cam_anim/%.canim=build/assets/cam_anim/%.canim)
-	-cp $(@:filesystem/cam_anim/%.scene=build/assets/cam_anim/%.sanim) $(@:%.scene=%.sanim)
+	-cp $(@:filesystem/cam_anim/%.canim=build/assets/cam_anim/%.sanim) $(@:%.canim=%.sanim)
 
 
 ###
