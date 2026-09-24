@@ -52,6 +52,7 @@
 #define HANG_INPUT_DELAY        0.2f
 
 #define JUMP_SPEED_THRESHOLD    2.1f
+#define JUMP_OVERHANG_HEIGHT    0.4f
 
 #define MAX_ROTATION_RATE       10.0f
 static struct Vector2 player_max_rotation;
@@ -464,6 +465,9 @@ void player_enter_grounded_state(struct player* player, struct contact* ground_c
 
     if (ground_contact) {
         player->last_footing_normal = ground_contact->normal;
+        player->state_data.grounded.last_surface_type = ground_contact->surface_type;
+    } else {
+        player->state_data.grounded.last_surface_type = SURFACE_TYPE_NONE;
     }
 }
 
@@ -552,17 +556,24 @@ enum player_ground_movement_result player_handle_ground_movement(struct player* 
     
     *speed = sqrtf(vector3MagSqrd2D(&collider->velocity));
     vector3_t* vel = &collider->velocity;
+    vector3_t* pos = &player->cutscene_actor.transform.position;
 
     if (!ground_contact) {
-        if (vel->x * vel->x + vel->z * vel->z > JUMP_SPEED_THRESHOLD * JUMP_SPEED_THRESHOLD) {
+        contact_t* shadow_contact = player->cutscene_actor.collider.shadow_contact;
+        if (shadow_contact && player->state_data.grounded.last_surface_type == SURFACE_TYPE_STICKY) {
+            ground_contact = shadow_contact;
+            *pos = shadow_contact->point;
+            vector3ProjectPlane(vel, &shadow_contact->normal, vel);
+        } else if (vel->x * vel->x + vel->z * vel->z > JUMP_SPEED_THRESHOLD * JUMP_SPEED_THRESHOLD && (!shadow_contact || pos->y - shadow_contact->point.y > JUMP_OVERHANG_HEIGHT)) {
             return GROUND_MOVEMENT_RESULT_JUMP;
+        } else {
+            return GROUND_MOVEMENT_RESULT_FALL;
         }
-
-        return GROUND_MOVEMENT_RESULT_FALL;
     }
 
+    player->state_data.grounded.last_surface_type = ground_contact->surface_type;
+
     bool is_good_footing = ground_contact->other_object == 0 && ground_contact->surface_type != SURFACE_TYPE_COYOTE;
-    vector3_t* pos = &player->cutscene_actor.transform.position;
 
     if (dynamic_object_should_slide(MAX_STABLE_SLOPE, ground_contact->normal.y, ground_contact->surface_type)) {
         if (vel->x * ground_contact->normal.x + vel->z * ground_contact->normal.z > 0.0f) {

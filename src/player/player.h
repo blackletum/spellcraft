@@ -144,6 +144,9 @@ union state_data {
         vector3_t climb_target;
         vector2_t target_rotation;
     } drop_to_hang;
+    struct {
+        uint16_t last_surface_type;
+    } grounded;
 };
 
 typedef union state_data state_data_t;
