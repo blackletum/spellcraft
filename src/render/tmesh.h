@@ -8,6 +8,7 @@
 #include "armature.h"
 #include "../math/transform.h"
 #include "../math/vector3s16.h"
+#include "../resource/incremental_loader.h"
 
 enum light_source {
     LIGHT_SOURCE_NONE,
@@ -41,9 +42,11 @@ struct tmesh {
 
 typedef struct tmesh tmesh_t;
 
+incremental_step_result_t tmesh_load_incremental(incremental_loader_t* loader, incremental_loader_step_t* step, FILE* file);
 void tmesh_load(struct tmesh* tmesh, FILE* file);
 void tmesh_load_filename(struct tmesh* tmesh, const char* filename);
 void tmesh_release(struct tmesh* tmesh);
+
 
 armature_attachment_t* tmesh_find_attachment(tmesh_t* mesh, const char* name);
 

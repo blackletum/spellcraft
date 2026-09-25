@@ -95,138 +95,167 @@ void tmesh_load_armature(struct tmesh* tmesh, FILE* file) {
     fread(&tmesh->armature.flags, sizeof(uint16_t), 1, file);
 }
 
-void tmesh_load(struct tmesh* tmesh, FILE* file) {
-    int header;
-
-    fread(&header, 1, 4, file);
-    assert(header == EXPECTED_HEADER);
-
-    // load material
-    tmesh->material = material_cache_load_linked_or_embedded(file);
-
-    fread(&tmesh->radius, sizeof(float), 1, file);
-
-    // load vertices
-
-    fread(&tmesh->vertex_count, sizeof(uint16_t), 1, file);
-    tmesh->vertices = malloc(sizeof(T3DVertPacked) * tmesh->vertex_count);
-    fread(&tmesh->vertices[0], sizeof(T3DVertPacked), tmesh->vertex_count, file);
-    data_cache_hit_writeback(&tmesh->vertices[0], sizeof(T3DVertPacked) * tmesh->vertex_count);
-
-    // load material transitions
-
-    uint16_t transition_count;
-    fread(&transition_count, sizeof(uint16_t), 1, file);
-    tmesh->material_transition_count = transition_count;
-
-    if (transition_count) {
-        tmesh->transition_materials = malloc(sizeof(struct material) * transition_count);
-
-        for (int i = 0; i < transition_count; i += 1) {
-            material_load(&tmesh->transition_materials[i], file);
-#if DEBUG_MATERIALS
-            material_debug(&tmesh->transition_materials[i], "transition");
-#endif
+incremental_step_result_t tmesh_load_incremental(incremental_loader_t* loader, incremental_loader_step_t* step, FILE* file) {
+    tmesh_t* tmesh = step->resource;
+    switch (step->step) {
+        case 0: {
+            int header;
+        
+            fread(&header, 1, 4, file);
+            assert(header == EXPECTED_HEADER);
+            
+            return INCREMENTAL_STEP_ONCE;
         }
-    } else {
-        tmesh->transition_materials = NULL;
-    }
-
-    tmesh_load_armature(tmesh, file);
-
-    // load attachments
-    fread(&tmesh->attachment_count, 2, 1, file);
-
-    if (tmesh->attachment_count) {
-        tmesh->attachments = malloc(sizeof(struct armature_attachment) * tmesh->attachment_count);
-
-        for (int i = 0; i < tmesh->attachment_count; i += 1) {
-            struct armature_attachment* attachment = &tmesh->attachments[i];
-            tmesh_load_attachment(attachment, file);
+        case 1: {
+            // load material
+            tmesh->material = material_cache_load_linked_or_embedded(file);
+            return INCREMENTAL_STEP_ONCE;
         }
-    } else {
-        tmesh->attachments = NULL;
-    }
+        case 2: {
+            fread(&tmesh->radius, sizeof(float), 1, file);
+        
+            // load vertices
+        
+            fread(&tmesh->vertex_count, sizeof(uint16_t), 1, file);
+            tmesh->vertices = malloc(sizeof(T3DVertPacked) * tmesh->vertex_count);
+            fread(&tmesh->vertices[0], sizeof(T3DVertPacked), tmesh->vertex_count, file);
+            return INCREMENTAL_STEP_ONCE;
+        }
+        case 3: {
+            // load material transitions
+            uint16_t transition_count;
+            fread(&transition_count, sizeof(uint16_t), 1, file);
+            tmesh->material_transition_count = transition_count;
 
-    fread(&tmesh->light_source, 1, 1, file);
-
-    // load mesh draw commands
-    
-    uint16_t command_count;
-    fread(&command_count, sizeof(uint16_t), 1, file);
-
-    bool has_bone = false;
-
-    T3DMat4FP* armature = t3d_segment_placeholder(T3D_SEGMENT_SKELETON);
-
-    rspq_block_begin();
-    rdpq_sync_pipe();
-
-    for (uint16_t i = 0; i < command_count; i += 1) {
-        uint8_t command;
-        fread(&command, sizeof(uint8_t), 1, file);
-
-        switch (command) 
-        {
-            case TMESH_COMMAND_VERTICES:
+            if (transition_count) {
+                tmesh->transition_materials = malloc(sizeof(struct material) * transition_count);
+                return INCREMENTAL_STEP_ONCE;
+            } else {
+                tmesh->transition_materials = NULL; 
+                return INCREMENTAL_STEP_N(2);
+            }
+        }
+        case 4: {
+            if (step->index < tmesh->material_transition_count) {
+                material_load(&tmesh->transition_materials[step->index], file);
+        #if DEBUG_MATERIALS
+                material_debug(&tmesh->transition_materials[step->index], "transition");
+        #endif
+                return INCREMENTAL_STEP_INDEX;
+            }
+            
+            return INCREMENTAL_STEP_ONCE;
+        }
+        case 5: {
+            tmesh_load_armature(tmesh, file);
+            return INCREMENTAL_STEP_ONCE;
+        }
+        case 6: {
+            // load attachments
+            fread(&tmesh->attachment_count, 2, 1, file);
+        
+            if (tmesh->attachment_count) {
+                tmesh->attachments = malloc(sizeof(struct armature_attachment) * tmesh->attachment_count);
+        
+                for (int i = 0; i < tmesh->attachment_count; i += 1) {
+                    struct armature_attachment* attachment = &tmesh->attachments[i];
+                    tmesh_load_attachment(attachment, file);
+                }
+            } else {
+                tmesh->attachments = NULL;
+            }
+        
+            fread(&tmesh->light_source, 1, 1, file);
+            return INCREMENTAL_STEP_ONCE;
+        } case 7: {
+            // load mesh draw commands
+            
+            uint16_t command_count;
+            fread(&command_count, sizeof(uint16_t), 1, file);
+        
+            bool has_bone = false;
+        
+            T3DMat4FP* armature = t3d_segment_placeholder(T3D_SEGMENT_SKELETON);
+        
+            rspq_block_begin();
+            rdpq_sync_pipe();
+        
+            for (uint16_t i = 0; i < command_count; i += 1) {
+                uint8_t command;
+                fread(&command, sizeof(uint8_t), 1, file);
+        
+                switch (command) 
                 {
-                    uint8_t offset;
-                    uint8_t count;
-                    uint16_t vertex_source;
-                    fread(&offset, sizeof(uint8_t), 1, file);
-                    fread(&count, sizeof(uint8_t), 1, file);
-                    fread(&vertex_source, sizeof(uint16_t), 1, file);
-                    t3d_vert_load(&tmesh->vertices[vertex_source], offset, count);
-                    break;
-                }
-            case TMESH_COMMAND_TRIANGLES:
-            {
-                uint8_t triangle_count;
-                fread(&triangle_count, sizeof(uint8_t), 1, file);
-
-                for (int i = 0 ; i < triangle_count; i += 1) {
-                    uint8_t indices[3];
-                    fread(&indices[0], sizeof(uint8_t), 3, file);
-                    t3d_tri_draw(indices[0], indices[1], indices[2]);
-                }
-                t3d_tri_sync();
-                break;
-            }
-            case TMESH_COMMAND_MATERIAL:
-            {
-                uint16_t material_index;
-                fread(&material_index, sizeof(uint16_t), 1, file);
-                assert(material_index < tmesh->material_transition_count);
-                material_apply(&tmesh->transition_materials[material_index]);
-                break;
-            }
-            case TMESH_COMMAND_BONE:
-            {
-                uint16_t bone_index;
-                fread(&bone_index, sizeof(uint16_t), 1, file);
-                if (bone_index == 0xFFFF) {
-                    if (has_bone) {
-                        t3d_matrix_pop(1);
-                        has_bone = false;
+                    case TMESH_COMMAND_VERTICES:
+                        {
+                            uint8_t offset;
+                            uint8_t count;
+                            uint16_t vertex_source;
+                            fread(&offset, sizeof(uint8_t), 1, file);
+                            fread(&count, sizeof(uint8_t), 1, file);
+                            fread(&vertex_source, sizeof(uint16_t), 1, file);
+                            t3d_vert_load(&tmesh->vertices[vertex_source], offset, count);
+                            break;
+                        }
+                    case TMESH_COMMAND_TRIANGLES:
+                    {
+                        uint8_t triangle_count;
+                        fread(&triangle_count, sizeof(uint8_t), 1, file);
+        
+                        for (int i = 0 ; i < triangle_count; i += 1) {
+                            uint8_t indices[3];
+                            fread(&indices[0], sizeof(uint8_t), 3, file);
+                            t3d_tri_draw(indices[0], indices[1], indices[2]);
+                        }
+                        t3d_tri_sync();
+                        break;
                     }
-                } else if (has_bone) {
-                    t3d_matrix_set(&armature[bone_index], true);
-                } else {
-                    t3d_matrix_push(&armature[bone_index]);
-                    has_bone = true;
+                    case TMESH_COMMAND_MATERIAL:
+                    {
+                        uint16_t material_index;
+                        fread(&material_index, sizeof(uint16_t), 1, file);
+                        assert(material_index < tmesh->material_transition_count);
+                        material_apply(&tmesh->transition_materials[material_index]);
+                        break;
+                    }
+                    case TMESH_COMMAND_BONE:
+                    {
+                        uint16_t bone_index;
+                        fread(&bone_index, sizeof(uint16_t), 1, file);
+                        if (bone_index == 0xFFFF) {
+                            if (has_bone) {
+                                t3d_matrix_pop(1);
+                                has_bone = false;
+                            }
+                        } else if (has_bone) {
+                            t3d_matrix_set(&armature[bone_index], true);
+                        } else {
+                            t3d_matrix_push(&armature[bone_index]);
+                            has_bone = true;
+                        }
+                        break;
+                    }
+                    default:
+                        assert(false);
                 }
-                break;
             }
-            default:
-                assert(false);
+        
+            if (has_bone) {
+                t3d_matrix_pop(1);
+            }
+        
+            tmesh->block = rspq_block_end();
+            
+            return INCREMENTAL_STEP_FINISH;
         }
+        default:
+            assert(false);
+            return INCREMENTAL_STEP_FINISH;
     }
+}
 
-    if (has_bone) {
-        t3d_matrix_pop(1);
-    }
-
-    tmesh->block = rspq_block_end();
+void tmesh_load(struct tmesh* tmesh, FILE* file) {
+    incremental_loader_load_full(INCREMENTAL_RESOURCE_TMESH, tmesh, file);
 }
 
 void tmesh_load_filename(struct tmesh* tmesh, const char* filename) {
