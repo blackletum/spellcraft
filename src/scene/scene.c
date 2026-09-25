@@ -366,48 +366,81 @@ void scene_build_room_filename(char* result, const char* room_name) {
     strcpy(curr, ".room");
 }
 
-void scene_load_room(struct scene* scene, loaded_room_t* room, int room_index) {
-    room_entity_block_t* room_source = &scene->room_entities[room_index];
+static memory_stream_t load_room_stream;
+static struct evaluation_context load_room_eval_context;
+static FILE* load_room_file;
 
-    if (room_source->block == NULL) {
-        room->entity_count = 0;
-        room->entities = NULL;
-        return;
+incremental_step_result_t scene_room_load_incremental(incremental_loader_t* loader, incremental_loader_step_t* step) {
+    loaded_room_t* room = step->resource;
+    scene_t* scene = step->file;
+    
+    room_entity_block_t* room_source = &scene->room_entities[room->room_index];
+
+    switch (step->step) {
+        case 0: {
+            if (room_source->block == NULL) {
+                room->entity_count = 0;
+                room->entities = NULL;
+                return INCREMENTAL_STEP_FINISH;
+            }
+
+            char room_filename[MAX_SCENE_NAME_LENGTH + 10];
+            scene_build_room_filename(room_filename, scene->room_metadata[room->room_index].name);
+        
+            load_room_file = asset_fopen(room_filename, NULL);
+
+            incremental_loader_push(loader, INCREMENTAL_RESOURCE_TMESH, &room->tmesh, load_room_file);       
+            return INCREMENTAL_STEP_ONCE;
+        }
+        case 1: {
+            fread(&room->center, sizeof(vector3_t), 1, load_room_file);
+        
+            mesh_collider_load(&room->mesh_collider, load_room_file);
+            collision_scene_add_static_mesh(&room->mesh_collider);
+
+            fclose(load_room_file);
+            return INCREMENTAL_STEP_ONCE;
+        }
+        case 2: {
+            memory_stream_init(&load_room_stream, room_source->block, room_source->block_size);
+        
+            uint16_t entity_count;
+            memory_stream_read(&load_room_stream, &entity_count, sizeof(entity_count));
+        
+            room->entity_count = entity_count;
+            room->entities = entity_count ? malloc(sizeof(loaded_entity_t) * entity_count) : NULL;
+        
+            evaluation_context_init(&load_room_eval_context); 
+            return INCREMENTAL_STEP_ONCE;
+        }
+        case 3: {
+            if (step->index < room->entity_count) {
+                room->entities[step->index] = scene_load_entity(scene, &load_room_stream, &load_room_eval_context);
+                return INCREMENTAL_STEP_INDEX;
+            } else {
+                return INCREMENTAL_STEP_ONCE;
+            }
+        }
+        case 4: {
+            if (step->index < room_source->shared_entity_count) {
+                scene_add_shared_reference(scene, room_source->shared_entity_index[step->index], &load_room_eval_context);
+                return INCREMENTAL_STEP_INDEX;
+            } else {
+                return INCREMENTAL_STEP_ONCE;
+            }
+        } case 5: {
+            evaluation_context_destroy(&load_room_eval_context);
+            return INCREMENTAL_STEP_FINISH;
+        }
+        default:
+            assert(false);
+            return INCREMENTAL_STEP_FINISH;
     }
 
-    memory_stream_t stream;
-    memory_stream_init(&stream, room_source->block, room_source->block_size);
+}
 
-    uint16_t entity_count;
-    memory_stream_read(&stream, &entity_count, sizeof(entity_count));
-
-    room->entity_count = entity_count;
-    room->entities = entity_count ? malloc(sizeof(loaded_entity_t) * entity_count) : NULL;
-
-    struct evaluation_context eval_context;
-    evaluation_context_init(&eval_context); 
-
-    for (int i = 0; i < entity_count; i += 1) {
-        room->entities[i] = scene_load_entity(scene, &stream, &eval_context);
-    }
-
-    for (int i = 0; i < room_source->shared_entity_count; i += 1) {
-        scene_add_shared_reference(scene, room_source->shared_entity_index[i], &eval_context);
-    }
-
-    evaluation_context_destroy(&eval_context);
-
-    char room_filename[MAX_SCENE_NAME_LENGTH + 10];
-    scene_build_room_filename(room_filename, scene->room_metadata[room_index].name);
-
-    FILE* room_file = asset_fopen(room_filename, NULL);
-    tmesh_load(&room->tmesh, room_file);
-    fread(&room->center, sizeof(vector3_t), 1, room_file);
-
-    mesh_collider_load(&room->mesh_collider, room_file);
-    collision_scene_add_static_mesh(&room->mesh_collider);
-
-    fclose(room_file);
+void scene_load_room(struct scene* scene, loaded_room_t* room) {
+    incremental_loader_load_full(INCREMENTAL_RESOURCE_ROOM, room, scene);
 }
 
 void scene_room_unload(loaded_room_t* room) {
@@ -431,7 +464,7 @@ bool scene_show_room(struct scene* scene, int room_index) {
 
         if (room->room_index == ROOM_INDEX_NONE) {
             room->room_index = room_index;
-            scene_load_room(scene, room, room_index);
+            scene_load_room(scene, room);
 
             expression_set_bool(scene->room_metadata[room_index].has_visited, true);
             scene->last_room = room_index;

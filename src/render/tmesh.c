@@ -95,8 +95,9 @@ void tmesh_load_armature(struct tmesh* tmesh, FILE* file) {
     fread(&tmesh->armature.flags, sizeof(uint16_t), 1, file);
 }
 
-incremental_step_result_t tmesh_load_incremental(incremental_loader_t* loader, incremental_loader_step_t* step, FILE* file) {
+incremental_step_result_t tmesh_load_incremental(incremental_loader_t* loader, incremental_loader_step_t* step) {
     tmesh_t* tmesh = step->resource;
+    FILE* file = step->file;
     switch (step->step) {
         case 0: {
             int header;

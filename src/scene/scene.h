@@ -5,6 +5,7 @@
 #include "../render/camera.h"
 #include "../render/tmesh.h"
 #include "../collision/mesh_collider.h"
+#include "../resource/incremental_loader.h"
 
 #include "../player/player.h"
 #include "../overworld/overworld.h"
@@ -15,6 +16,8 @@
 #include "../menu/pause_menu.h"
 #include "../menu/map.h"
 #include "../audio/audio.h"
+
+struct scene;
 
 struct loading_zone {
     struct Box3D bounding_box;
@@ -81,6 +84,7 @@ struct loaded_room {
     tmesh_t tmesh;
     vector3_t center;
     mesh_collider_t mesh_collider;
+    struct scene* scene;
 };
 
 typedef struct loaded_room loaded_room_t;
@@ -162,6 +166,8 @@ void scene_update(void* data);
 void scene_queue_next(const char* scene_name);
 void scene_clear_next();
 const char* scene_last_loaded();
+
+incremental_step_result_t scene_room_load_incremental(incremental_loader_t* loader, incremental_loader_step_t* step);
 
 bool scene_show_room(struct scene* scene, int room_index);
 void scene_hide_room(struct scene* scene, int room_index);
