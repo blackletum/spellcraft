@@ -49,7 +49,10 @@ void incremental_loader_finish(incremental_loader_t* loader);
 void incremental_loader_push(incremental_loader_t* loader, incremental_resource_type_t type, void* resource, void* file);
 
 void incremental_loader_load_full(incremental_resource_type_t type, void* resource, void* file);
-void incremental_loader_enqueue(incremental_resource_type_t type, void* resource, incremental_loader_complete callback, void* data);
+
+void incremental_loader_enqueue(incremental_resource_type_t type, void* resource, void* file, incremental_loader_complete callback, void* data);
+void incremental_loader_process_queue(uint64_t max_ticks);
+void incremental_loader_flush_queue();
 
 #define INCREMENTAL_STEP_END     0xFFFF
 

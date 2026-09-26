@@ -77,7 +77,16 @@ struct loaded_entity {
 
 typedef struct loaded_entity loaded_entity_t;
 
+enum loaded_room_state {
+    LOADED_ROOM_STATE_UNUSED,
+    LOADED_ROOM_STATE_LOADING,
+    LOADED_ROOM_STATE_LOADED,
+};
+
+typedef enum loaded_room_state loaded_room_state_t;
+
 struct loaded_room {
+    uint16_t state;
     uint16_t room_index;
     uint16_t entity_count;
     loaded_entity_t* entities;

@@ -247,7 +247,7 @@ struct scene* scene_load(const char* filename) {
     scene_time = 0.0f;
 
     for (int i = 0; i < MAX_LOADED_ROOM; i += 1) {
-        scene->loaded_rooms[i].room_index = ROOM_INDEX_NONE;
+        scene->loaded_rooms[i].state = LOADED_ROOM_STATE_UNUSED;
     }
 
     scene->next_loaded_room_cutscene = 0;
@@ -415,10 +415,12 @@ void scene_release(struct scene* scene) {
         return;
     }
 
+    incremental_loader_flush_queue();
+
     for (int i = 0; i < MAX_LOADED_ROOM; i += 1) {
         loaded_room_t* room = &scene->loaded_rooms[i];
 
-        if (room->room_index != ROOM_INDEX_NONE) {
+        if (room->state != LOADED_ROOM_STATE_UNUSED) {
             scene_hide_room(scene, room->room_index);
         }
     }

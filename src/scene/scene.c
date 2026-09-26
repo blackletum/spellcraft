@@ -89,7 +89,7 @@ void scene_render(void* data, struct render_batch* batch) {
     for (int i = 0; i < MAX_LOADED_ROOM; i += 1) {
         loaded_room_t* room = &scene->loaded_rooms[i];
 
-        if (room->room_index == ROOM_INDEX_NONE) {
+        if (room->state != LOADED_ROOM_STATE_LOADED) {
             continue;
         }
 
@@ -112,7 +112,7 @@ void scene_check_despawns(struct scene* scene) {
     for (int room_index = 0; room_index < MAX_LOADED_ROOM; room_index += 1) {
         loaded_room_t* room = &scene->loaded_rooms[room_index];
 
-        if (room->room_index == ROOM_INDEX_NONE) {
+        if (room->state != LOADED_ROOM_STATE_LOADED) {
             continue;
         }
 
@@ -147,7 +147,7 @@ void scene_check_cutscenes(scene_t* scene) {
         i += 1, scene->next_loaded_room_cutscene = NEXT_LOADED_ROOM(scene->next_loaded_room_cutscene)) {
         loaded_room_t* room = &scene->loaded_rooms[scene->next_loaded_room_cutscene];
 
-        if (room->room_index == ROOM_INDEX_NONE) {
+        if (room->state != LOADED_ROOM_STATE_LOADED) {
             continue;
         }
 
@@ -436,11 +436,18 @@ incremental_step_result_t scene_room_load_incremental(incremental_loader_t* load
             assert(false);
             return INCREMENTAL_STEP_FINISH;
     }
+}
 
+void scene_room_loaded(void* data, void* resource) {
+    loaded_room_t* room = (loaded_room_t*)data;
+    room->state = LOADED_ROOM_STATE_LOADED;
 }
 
 void scene_load_room(struct scene* scene, loaded_room_t* room) {
+    room->state = LOADED_ROOM_STATE_LOADING;
+    // incremental_loader_enqueue(INCREMENTAL_RESOURCE_ROOM, room, scene, scene_room_loaded, room);
     incremental_loader_load_full(INCREMENTAL_RESOURCE_ROOM, room, scene);
+    room->state = LOADED_ROOM_STATE_LOADED;
 }
 
 void scene_room_unload(loaded_room_t* room) {
@@ -462,7 +469,7 @@ bool scene_show_room(struct scene* scene, int room_index) {
     for (int i = 0; i < MAX_LOADED_ROOM; i += 1) {
         loaded_room_t* room = &scene->loaded_rooms[i];
 
-        if (room->room_index == ROOM_INDEX_NONE) {
+        if (room->state == LOADED_ROOM_STATE_UNUSED) {
             room->room_index = room_index;
             scene_load_room(scene, room);
 
@@ -481,7 +488,7 @@ void scene_hide_room(struct scene* scene, int room_index) {
 
         if (room->room_index == room_index) {
             scene_room_unload(room);
-            room->room_index = ROOM_INDEX_NONE;
+            room->state = LOADED_ROOM_STATE_UNUSED;
 
 
             room_entity_block_t* room_source = &scene->room_entities[room_index];
@@ -498,7 +505,7 @@ void scene_hide_room(struct scene* scene, int room_index) {
         for (int i = 0; i < MAX_LOADED_ROOM; i += 1) {
             loaded_room_t* room = &scene->loaded_rooms[i];
 
-            if (room->room_index != ROOM_INDEX_NONE) {
+            if (room->state == LOADED_ROOM_STATE_LOADED) {
                 scene->last_room = room->room_index;
                 break;
             }
